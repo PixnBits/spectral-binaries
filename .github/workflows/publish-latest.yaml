@@ -5,19 +5,23 @@ name: Publish the latest Spectral release binaries
 
 on:
   workflow_dispatch:
+  
 
 jobs:
   install-build-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          registry-url: https://registry.npmjs.org/
+          registry-url: 'https://registry.npmjs.org/'
       - run: npm ci
       - run: ./scripts/build-latest.js
       - run: |
-          find dist -maxdepth 1 -type d \( ! -name dist \) -exec bash -c "cd '{}' && npm publish" \;
+          find dist -maxdepth 1 -type d \( ! -name dist \) -exec bash -c "cd '{}' && npm publish --provenance --access public" \;
         env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

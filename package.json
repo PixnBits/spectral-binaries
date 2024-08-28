@@ -2,6 +2,9 @@
   "name": "spectral-binaries",
   "version": "0.1.0",
   "description": "Distribute https://github.com/stoplightio/spectral releases via npm",
+  "repository": {
+    "url": "https://github.com/PixnBits/spectral-binaries"
+  },
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

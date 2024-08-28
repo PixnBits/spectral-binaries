@@ -58,7 +58,10 @@ async function createPackageJSON(pkgPath, release) {
     name: 'spectral-binaries',
     version: release.name,
     description: `Binaries of Spectral ${release.name} (${release.html_url}), via npm`,
-    type: "module",
+    repository: {
+      url: 'https://github.com/PixnBits/spectral-binaries',
+    },
+    type: 'module',
     license,
   }, null, 2))
   return pkgJSONPath;

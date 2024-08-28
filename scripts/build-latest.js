@@ -88,8 +88,7 @@ ${release.body || ''}
     const results = await Promise.all([
       createPackageJSON(pkgPath, release),
       createReadme(pkgPath, release),
-      // ...release.assets.map((asset) => downloadAsset(pkgPath, asset)),
-      downloadAsset(pkgPath, release.assets[0]),
+      ...release.assets.map((asset) => downloadAsset(pkgPath, asset)),
     ]);
 
     console.log(`files stored for release ${release.tag_name}`, results);

@@ -10,6 +10,42 @@ const PROJECT_ROOT = path.resolve(import.meta.dirname, '../');
 
 const limitAssetDownloads = limit(1);
 
+async function mapVersionsToReleases(versions) {
+  const map = new Map();
+  const versionsToFind = new Set(versions);
+
+  let page = 1;
+  while (versionsToFind.size > 0) {
+    console.log('requesting page %d', page);
+    const response = await fetch(`https://api.github.com/repos/stoplightio/spectral/releases?page=${page}`);
+    if (response.status === 404) {
+      // that's the end of the releases
+      break;
+    }
+    if (response.status !== 200) {
+      throw new Error(`release page ${page} had a response status ${response.status}, cannot find remaining versions`);
+    }
+    const releases = await response.json();
+
+    if (page === 1 && versionsToFind.has('latest')) {
+      map.set('latest', releases[0]);
+      versionsToFind.delete('latest');
+    }
+
+    for (const release of releases) {
+      if (!versionsToFind.has(release.tag_name)) {
+        continue;
+      }
+      map.set(release.tag_name, release);
+      versionsToFind.delete(release.tag_name);
+    }
+
+    page += 1;
+  }
+
+  return map;
+}
+
 function downloadAssetWorker(assetPath, url, size, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     https.get(url, (response) => {
@@ -79,24 +115,29 @@ ${release.body || ''}
   return readmePath;
 }
 
-(async function main() {
+(async function main(nodePath, selfPath, ...versions) {
   try {
-    const release = await fetch('https://api.github.com/repos/stoplightio/spectral/releases/latest')
-      .then(response => response.json());
+    if (versions.length < 1) {
+      process.exitCode = 2;
+      throw new Error('must provide a version, e.g. "latest", "6.11.1"');
+    }
 
-    console.log('release %s has %d assets', release.tag_name, release.assets.length);
+    const releaseMap = await mapVersionsToReleases(versions);
 
-    const pkgPath = path.join(PROJECT_ROOT, 'dist', release.tag_name);
-    await fs.mkdir(pkgPath, { recursive: true });
-    const results = await Promise.all([
-      createPackageJSON(pkgPath, release),
-      createReadme(pkgPath, release),
-      ...release.assets.map((asset) => downloadAsset(pkgPath, asset)),
-    ]);
+    for await (const [, release] of releaseMap.entries()) {
+      console.log('release %s has %d assets', release.tag_name, release.assets.length);
+      const pkgPath = path.join(PROJECT_ROOT, 'dist', release.tag_name);
+      await fs.mkdir(pkgPath, { recursive: true });
+      const results = await Promise.all([
+        createPackageJSON(pkgPath, release),
+        createReadme(pkgPath, release),
+        ...release.assets.map((asset) => downloadAsset(pkgPath, asset)),
+      ]);
 
-    console.log(`files stored for release ${release.tag_name}`, results);
+      console.log(`files stored for release ${release.tag_name}`, results);
+    }
 
-    // TODO: npm publish
+    // `$ npm publish` in the workflow
 
   } catch (error) {
     process.exitCode = 1;

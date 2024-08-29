@@ -1,8 +1,13 @@
-name: Publish the latest Spectral release binaries
+name: Publish Spectral release binaries
 
 on:
   workflow_dispatch:
-
+    inputs:
+      versions:
+        description: space separated version tags to publish, e.g. "v6.11.1 v6.4.1"
+        type: text
+        required: true
+  
 jobs:
   install-build-publish:
     runs-on: ubuntu-latest
@@ -16,8 +21,8 @@ jobs:
           node-version-file: '.nvmrc'
           registry-url: 'https://registry.npmjs.org/'
       - run: npm ci
-      - run: ./scripts/build-packages.js latest
+      - run: ./scripts/build-packages.js ${{ inputs.versions }}
       - run: |
-          find dist -maxdepth 1 -type d \( ! -name dist \) -exec bash -c "cd '{}' && npm publish --provenance" \;
+          find dist -maxdepth 1 -type d \( ! -name dist \) -exec bash -c "cd '{}' && npm publish --provenance --tag=npm-issue-10625" \;
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
